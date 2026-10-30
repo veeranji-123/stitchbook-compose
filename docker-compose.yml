@@ -1,0 +1,100 @@
+services:
+  core:
+    build: ../stitchbook-core
+    env_file: ../stitchbook-core/.env
+    environment:
+      DB_HOST: stitchbook-postgres
+      NOTIFICATIONS_URL: http://notifications:3003
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    volumes:
+      - core-uploads:/app/uploads
+
+  payments:
+    build: ../stitchbook-payments
+    env_file: ../stitchbook-payments/.env
+    environment:
+      DB_HOST: stitchbook-postgres
+      CORE_URL: http://core:3001
+      NOTIFICATIONS_URL: http://notifications:3003
+    restart: unless-stopped
+    ports:
+      - "3002:3002"
+    depends_on:
+      - core
+
+  notifications:
+    build: ../stitchbook-notifications
+    env_file: ../stitchbook-notifications/.env
+    environment:
+      DB_HOST: stitchbook-postgres
+    restart: unless-stopped
+    ports:
+      - "3003:3003"
+
+  admin:
+    build: ../stitchbook-admin
+    env_file: ../stitchbook-admin/.env
+    environment:
+      DB_HOST: stitchbook-postgres
+      CORE_URL: http://core:3001
+    restart: unless-stopped
+    ports:
+      - "3004:3004"
+    depends_on:
+      - core
+
+  customer:
+    build: ../stitchbook-customer
+    env_file: ../stitchbook-customer/.env
+    environment:
+      CORE_URL: http://core:3001
+    restart: unless-stopped
+    ports:
+      - "3005:3005"
+    depends_on:
+      - core
+
+  tailor:
+    build: ../stitchbook-tailor
+    env_file: ../stitchbook-tailor/.env
+    environment:
+      CORE_URL: http://core:3001
+      CUSTOMER_URL: http://customer:3005
+    restart: unless-stopped
+    ports:
+      - "3006:3006"
+    depends_on:
+      - core
+      - customer
+
+  gateway:
+    build: ../stitchbook-gateway
+    env_file: ../stitchbook-gateway/.env
+    environment:
+      PORT: "8090"
+      CORE_URL: http://core:3001
+      PAYMENTS_URL: http://payments:3002
+      NOTIFICATIONS_URL: http://notifications:3003
+      ADMIN_URL: http://admin:3004
+      CUSTOMER_URL: http://customer:3005
+      TAILOR_URL: http://tailor:3006
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+    depends_on:
+      - core
+      - payments
+      - notifications
+      - admin
+      - customer
+      - tailor
+
+volumes:
+  core-uploads:
+
+networks:
+  default:
+    name: stitchbook
+    external: true
